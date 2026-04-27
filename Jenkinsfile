@@ -22,7 +22,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Stage 4: Deploy to Azure'
-                bat 'set AZURE_CONFIG_DIR=C:\\Users\\shatw\\.azure && az webapp up --name devops-website-2025 --resource-group devops-rg --html'
+                bat 'set "AZURE_CONFIG_DIR=C:\\Users\\shatw\\.azure" && az webapp up --name devops-website-2025 --resource-group devops-rg --html'
             }
         }
     }
