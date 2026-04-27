@@ -1,3 +1,8 @@
+## 🌐 Live Website
+👉 [Click here to view](https://yellow-mud-0f0a4e90f.7.azurestaticapps.net)
+
+
+
 # 🚀 DevOps Project — Jenkins + Azure Deployment
 
 A complete CI/CD pipeline that automatically deploys a website to **Microsoft Azure** using **Jenkins**.
