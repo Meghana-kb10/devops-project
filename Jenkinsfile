@@ -8,18 +8,12 @@ pipeline {
     agent any
 
     environment {
-        // --- Azure Configuration ---
-        AZURE_RESOURCE_GROUP = 'devops-rg'
-        AZURE_APP_NAME       = 'devops-website'
-        AZURE_LOCATION       = 'eastus'
-
         // --- Docker / ACR Configuration ---
         ACR_NAME             = 'devopsregistry'
         IMAGE_NAME           = 'devops-website'
         IMAGE_TAG            = "${env.BUILD_NUMBER}"
 
         // --- Credentials (configured in Jenkins Credentials Manager) ---
-        AZURE_CREDENTIALS    = credentials('azure-service-principal')
         ACR_CREDENTIALS      = credentials('acr-credentials')
     }
 
@@ -103,49 +97,14 @@ pipeline {
         }
 
         // ----------------------------------------------------------
-        // STAGE 5: Deploy to Azure App Service
+        // STAGE 5: Cleanup
         // ----------------------------------------------------------
-        stage('Deploy to Azure') {
+        stage('Cleanup Images') {
             steps {
-                echo "🚀 Deploying to Azure App Service..."
+                echo "🧹 Cleaning up local Docker images..."
                 sh """
-                    # Login to Azure using Service Principal
-                    az login --service-principal \
-                        -u ${AZURE_CREDENTIALS_USR} \
-                        -p ${AZURE_CREDENTIALS_PSW} \
-                        --tenant ${AZURE_CREDENTIALS_TENANT}
-                    
-                    # Create Resource Group (if it doesn't exist)
-                    az group create \
-                        --name ${AZURE_RESOURCE_GROUP} \
-                        --location ${AZURE_LOCATION} || true
-                    
-                    # Create App Service Plan (if it doesn't exist)
-                    az appservice plan create \
-                        --name devops-plan \
-                        --resource-group ${AZURE_RESOURCE_GROUP} \
-                        --sku B1 \
-                        --is-linux || true
-                    
-                    # Create or update Web App with the new Docker image
-                    az webapp create \
-                        --resource-group ${AZURE_RESOURCE_GROUP} \
-                        --plan devops-plan \
-                        --name ${AZURE_APP_NAME} \
-                        --deployment-container-image-name \
-                            ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} || \
-                    az webapp config container set \
-                        --name ${AZURE_APP_NAME} \
-                        --resource-group ${AZURE_RESOURCE_GROUP} \
-                        --docker-custom-image-name \
-                            ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} \
-                        --docker-registry-server-url \
-                            https://${ACR_NAME}.azurecr.io \
-                        --docker-registry-server-user ${ACR_CREDENTIALS_USR} \
-                        --docker-registry-server-password ${ACR_CREDENTIALS_PSW}
-                    
-                    echo "✅ Deployment complete!"
-                    echo "🌐 Live at: https://${AZURE_APP_NAME}.azurewebsites.net"
+                    docker rmi ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} || true
+                    docker rmi ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest || true
                 """
             }
         }
@@ -158,21 +117,14 @@ pipeline {
         success {
             echo """
             ╔══════════════════════════════════════════════╗
-            ║  ✅  BUILD & DEPLOY SUCCESSFUL               ║
-            ║  🌐  https://${AZURE_APP_NAME}.azurewebsites.net  ║
+            ║  ✅  BUILD SUCCESSFUL!                        ║
+            ║  🐳 Image: ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} ║
+            ║  📤 Pushed to ACR                             ║
             ╚══════════════════════════════════════════════╝
             """
         }
         failure {
             echo '❌ Pipeline failed! Check logs above for details.'
-        }
-        always {
-            // Clean up local Docker images to save disk space
-            sh """
-                docker rmi ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} || true
-                docker rmi ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest || true
-            """
-            echo '🧹 Cleanup complete.'
         }
     }
 }
