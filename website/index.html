@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DevOps Pipeline — Jenkins & Azure</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --green: #00ff88;
+      --text: #e2e8f0;
+      --muted: #64748b;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: 0;
+      animation: gridMove 20s linear infinite;
+    }
+
+    @keyframes gridMove {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(60px); }
+    }
+
+    .glow-orb {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb1 { top: -200px; left: -200px; background: rgba(124,58,237,0.15); }
+    .orb2 { bottom: -200px; right: -200px; background: rgba(0,212,255,0.1); }
+
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 1.2rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      background: rgba(10,10,15,0.8);
+    }
+
+    .nav-logo {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--green);
+    }
+
+    .pulse-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    main { position: relative; z-index: 1; }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 6rem 2rem 4rem;
+    }
+
+    .hero-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      border: 1px solid rgba(0,212,255,0.3);
+      padding: 0.4rem 1.2rem;
+      border-radius: 100px;
+      margin-bottom: 2rem;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 7rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.8s ease 0.1s both;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      max-width: 600px;
+      font-size: 1.1rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 3rem;
+      animation: fadeUp 0.8s ease 0.2s both;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 0.8s ease 0.3s both;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      padding: 0.9rem 2.5rem;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.85; transform: translateY(-2px); }
+
+    .btn-outline {
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.9rem 2.5rem;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .btn-outline:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Pipeline section */
+    .section {
+      padding: 6rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .section h2 {
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.7;
+      max-width: 520px;
+      margin-bottom: 3rem;
+    }
+
+    /* Pipeline flow */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      padding: 2rem 0;
+      position: relative;
+    }
+
+    .pipe-step {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .pipe-icon {
+      width: 80px; height: 80px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      position: relative;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    .pipe-icon:hover { border-color: var(--accent); transform: scale(1.05); }
+
+    .pipe-icon.active {
+      border-color: var(--green);
+      box-shadow: 0 0 20px rgba(0,255,136,0.15);
+    }
+
+    .pipe-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    .pipe-arrow {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--border), var(--accent), var(--border));
+      flex-shrink: 0;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .pipe-arrow::after {
+      content: '▶';
+      position: absolute;
+      right: -6px;
+      top: -8px;
+      font-size: 0.6rem;
+      color: var(--accent);
+    }
+
+    /* Tech stack cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: border-color 0.3s, transform 0.3s;
+      animation: fadeUp 0.6s ease both;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-4px); }
+
+    .card-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .card-tag {
+      display: inline-block;
+      margin-top: 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      border: 1px solid rgba(0,212,255,0.2);
+      padding: 0.2rem 0.7rem;
+      border-radius: 100px;
+    }
+
+    /* Terminal block */
+    .terminal {
+      background: #050508;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 2rem 0;
+    }
+
+    .terminal-header {
+      background: var(--surface);
+      padding: 0.8rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot.red { background: #ff5f57; }
+    .dot.yellow { background: #febc2e; }
+    .dot.green { background: #28c840; }
+
+    .terminal-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .terminal-body {
+      padding: 1.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+
+    .t-prompt { color: var(--accent); }
+    .t-cmd { color: var(--text); }
+    .t-out { color: var(--muted); }
+    .t-success { color: var(--green); }
+    .t-var { color: #f97316; }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.5rem;
+      margin: 4rem 0;
+    }
+
+    .stat {
+      text-align: center;
+      padding: 2rem;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+    }
+
+    .stat-num {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 2rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    footer .f-logo {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    footer .f-badges {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .f-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .f-badge.active { border-color: var(--green); color: var(--green); }
+
+    @media (max-width: 640px) {
+      nav { padding: 1rem 1.5rem; }
+      .pipeline { flex-wrap: wrap; justify-content: center; }
+      .pipe-arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="glow-orb orb1"></div>
+<div class="glow-orb orb2"></div>
+
+<nav>
+  <div class="nav-logo">// devops-pipeline</div>
+  <div class="nav-badge">
+    <div class="pulse-dot"></div>
+    DEPLOYED ON AZURE
+  </div>
+</nav>
+
+<main>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-tag">Jenkins CI/CD × Azure Cloud × DevOps</div>
+    <h1>Build. Test.<br/><span>Deploy.</span></h1>
+    <p>An automated CI/CD pipeline that builds, tests, and deploys this website to Microsoft Azure using Jenkins — from code commit to live in minutes.</p>
+    <div class="hero-cta">
+      <a href="#pipeline" class="btn-primary">View Pipeline</a>
+      <a href="#stack" class="btn-outline">Tech Stack</a>
+    </div>
+  </section>
+
+  <!-- Pipeline Flow -->
+  <section class="section" id="pipeline">
+    <div class="section-label">// 01 — CI/CD PIPELINE</div>
+    <h2>How It Works</h2>
+    <p class="section-sub">Every git push triggers the Jenkins pipeline, which automatically builds, tests, and ships to Azure.</p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-icon active">📝</div>
+        <div class="pipe-label">CODE<br/>COMMIT</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-icon active">🔗</div>
+        <div class="pipe-label">GITHUB<br/>WEBHOOK</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-icon active">🏗️</div>
+        <div class="pipe-label">JENKINS<br/>BUILD</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-icon active">🧪</div>
+        <div class="pipe-label">AUTOMATED<br/>TESTS</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-icon active">🐳</div>
+        <div class="pipe-label">DOCKER<br/>IMAGE</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-icon active">☁️</div>
+        <div class="pipe-label">AZURE<br/>DEPLOY</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-step">
+        <div class="pipe-icon active">✅</div>
+        <div class="pipe-label">LIVE ON<br/>AZURE</div>
+      </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="terminal">
+      <div class="terminal-header">
+        <div class="dot red"></div>
+        <div class="dot yellow"></div>
+        <div class="dot green"></div>
+        <span class="terminal-title">Jenkins Build Log</span>
+      </div>
+      <div class="terminal-body">
+        <div><span class="t-prompt">$</span> <span class="t-cmd">git push origin main</span></div>
+        <div class="t-out">Webhook triggered → Jenkins pipeline started</div>
+        <div><span class="t-prompt">></span> <span class="t-var">Stage: Build</span></div>
+        <div class="t-out">  docker build -t devops-website:latest .</div>
+        <div class="t-success">  ✓ Image built successfully</div>
+        <div><span class="t-prompt">></span> <span class="t-var">Stage: Test</span></div>
+        <div class="t-out">  Running health checks...</div>
+        <div class="t-success">  ✓ All tests passed (3/3)</div>
+        <div><span class="t-prompt">></span> <span class="t-var">Stage: Deploy to Azure</span></div>
+        <div class="t-out">  az webapp deploy --name devops-website ...</div>
+        <div class="t-success">  ✓ Deployment successful!</div>
+        <div class="t-success">  🚀 Live at: https://devops-website.azurewebsites.net</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <div class="section" style="padding-top: 0;">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">~3<span style="font-size:1.5rem">min</span></div>
+        <div class="stat-label">BUILD TIME</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">100<span style="font-size:1.5rem">%</span></div>
+        <div class="stat-label">AUTOMATED</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">0</div>
+        <div class="stat-label">MANUAL STEPS</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">24<span style="font-size:1.5rem">/7</span></div>
+        <div class="stat-label">AZURE UPTIME</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tech Stack -->
+  <section class="section" id="stack">
+    <div class="section-label">// 02 — TECH STACK</div>
+    <h2>Technologies Used</h2>
+    <p class="section-sub">A complete DevOps stack for modern cloud deployment workflows.</p>
+
+    <div class="cards-grid">
+      <div class="card" style="animation-delay:0.1s">
+        <div class="card-icon">🔴</div>
+        <h3>Jenkins</h3>
+        <p>Open-source automation server that powers our CI/CD pipeline. Configured with a declarative Jenkinsfile to orchestrate every build and deployment.</p>
+        <span class="card-tag">CI/CD AUTOMATION</span>
+      </div>
+      <div class="card" style="animation-delay:0.2s">
+        <div class="card-icon">☁️</div>
+        <h3>Microsoft Azure</h3>
+        <p>Cloud platform hosting the application via Azure App Service. Scales automatically and provides global availability with 99.9% uptime SLA.</p>
+        <span class="card-tag">CLOUD HOSTING</span>
+      </div>
+      <div class="card" style="animation-delay:0.3s">
+        <div class="card-icon">🐳</div>
+        <h3>Docker</h3>
+        <p>Containerized the web application for consistent builds. The same Docker image runs in Jenkins tests and gets shipped to Azure — no environment surprises.</p>
+        <span class="card-tag">CONTAINERIZATION</span>
+      </div>
+      <div class="card" style="animation-delay:0.4s">
+        <div class="card-icon">🐱</div>
+        <h3>GitHub</h3>
+        <p>Source control with webhook integration. Every push to the main branch triggers the Jenkins pipeline automatically — true continuous delivery.</p>
+        <span class="card-tag">SOURCE CONTROL</span>
+      </div>
+      <div class="card" style="animation-delay:0.5s">
+        <div class="card-icon">🌐</div>
+        <h3>HTML/CSS/JS</h3>
+        <p>This website — built with pure HTML, CSS, and JavaScript. Served via Nginx inside a Docker container for fast, lightweight delivery.</p>
+        <span class="card-tag">FRONTEND</span>
+      </div>
+      <div class="card" style="animation-delay:0.6s">
+        <div class="card-icon">🐳</div>
+        <h3>Nginx</h3>
+        <p>High-performance web server serving static files inside the container. Configured to handle routing and compression for optimal load times.</p>
+        <span class="card-tag">WEB SERVER</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="f-logo">// devops-website · built for Jenkins + Azure demo</div>
+  <div class="f-badges">
+    <span class="f-badge active">● DEPLOYED</span>
+    <span class="f-badge">JENKINS</span>
+    <span class="f-badge">AZURE</span>
+    <span class="f-badge">DOCKER</span>
+  </div>
+</footer>
+
+</body>
+</html>
