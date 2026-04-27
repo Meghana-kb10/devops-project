@@ -21,11 +21,8 @@ pipeline {
         }
         stage('Deploy') {
             steps {
-                echo 'Stage 4: Deploy'
-                withCredentials([usernamePassword(credentialsId: 'azure-login', usernameVariable: 'AZ_USER', passwordVariable: 'AZ_PASS')]) {
-                    bat "az login -u %AZ_USER% -p %AZ_PASS%"
-                    bat "az webapp up --name devops-website-2025 --resource-group devops-rg --html"
-                }
+                echo 'Stage 4: Deploy to Azure'
+                bat 'az webapp up --name devops-website-2025 --resource-group devops-rg --html'
             }
         }
     }
